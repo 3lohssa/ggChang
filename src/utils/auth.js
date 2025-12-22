@@ -4,12 +4,19 @@ const API_ENDPOINT = 'https://ttxklr1893.execute-api.ap-southeast-1.amazonaws.co
 export const exchangeCodeForTokens = async (code) => {
   try {
     console.log('正在交換 token，code:', code);
+
+    // 根據當前網址決定 redirect_uri
+    const redirectUri = 'http://localhost:5173/';
+
     const response = await fetch(`${API_ENDPOINT}/exchangeCode`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ code })
+      body: JSON.stringify({
+        code,
+        redirect_uri: redirectUri
+      })
     });
 
     console.log('Token 回應狀態:', response.status);
@@ -61,5 +68,5 @@ export const getAuthHeaders = () => {
   const idToken = getIdToken();
   return idToken ? {
     'Authorization': `Bearer ${idToken}`
-  } : {};
+    } : {};
 };
