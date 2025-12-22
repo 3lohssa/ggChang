@@ -1,39 +1,76 @@
 // src/pages/Dashboard.jsx
 import { Container, Card, Typography, Button, Box, Grid, IconButton, AppBar, Toolbar } from '@mui/material'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import AddIcon from '@mui/icons-material/Add';
 import LogoutIcon from '@mui/icons-material/Logout';
 import LoginIcon from '@mui/icons-material/Login';
 import MenuIcon from '@mui/icons-material/Menu';
 import axios from 'axios'
+import { exchangeCodeForTokens, isAuthenticated, logout as authLogout, getAuthHeaders } from '../utils/auth'
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [records, setRecords] = useState([]) // 儲存支出紀錄
   const [totalAmount, setTotalAmount] = useState(0) // 儲存總金額
 
   const fetchData = async () => {
     try {
-      const response = await axios.get('https://ttxklr1893.execute-api.ap-southeast-1.amazonaws.com/prod/expenses');
+      const response = await axios.get(
+        'https://ttxklr1893.execute-api.ap-southeast-1.amazonaws.com/prod/expenses',
+        {
+          headers: getAuthHeaders()
+        }
+      );
       setRecords(response.data.items || []);
-      
+
       const sum = (response.data.items || []).reduce((acc, curr) => acc + Number(curr.amount), 0);
       setTotalAmount(sum);
     } catch (error) {
       console.error("抓取失敗:", error);
+      if (error.response?.status === 401) {
+        authLogout();
+        setIsLoggedIn(false);
+        navigate('/login');
+      }
     }
   };
 
   useEffect(() => {
-    setIsLoggedIn(localStorage.getItem('isLoggedIn') === 'true')
-  }, [])
+    // 處理 Cognito 回調
+    const handleCallback = async () => {
+      const params = new URLSearchParams(location.search);
+      const code = params.get('code');
+
+      if (code) {
+        try {
+          await exchangeCodeForTokens(code);
+          setIsLoggedIn(true);
+          // 清除 URL 中的 code 參數
+          window.history.replaceState({}, document.title, '/');
+        } catch (error) {
+          console.error('登入失敗:', error);
+          navigate('/login');
+        }
+      }
+    };
+
+    handleCallback();
+    setIsLoggedIn(isAuthenticated());
+  }, [location, navigate]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchData();
+    }
+  }, [isLoggedIn]);
 
   const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn')
-    setIsLoggedIn(false)
-    navigate('/login')
+    authLogout();
+    setIsLoggedIn(false);
+    navigate('/login');
   }
   return (
     <Box sx={{ flexGrow: 1 }}>
