@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -8,18 +8,79 @@ import {
   Snackbar,
   Alert,
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { getAuthHeaders } from '../utils/auth';
+import { getAuthHeaders, isAuthenticated, logout as authLogout } from '../utils/auth';
+import NavigationBar from '../components/NavigationBar';
 
 const API_BASE = 'https://ttxklr1893.execute-api.ap-southeast-1.amazonaws.com/prod';
 
 export default function AddFriend() {
+  const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState('');
+  const [friendRequests, setFriendRequests] = useState([]);
   const [status, setStatus] = useState({
     message: '',
     type: 'success',
     open: false,
   });
+
+  useEffect(() => {
+    setIsLoggedIn(isAuthenticated());
+  }, []);
+
+  // 獲取好友邀請
+  useEffect(() => {
+    const fetchFriendRequests = async () => {
+      if (!isLoggedIn) return;
+
+      try {
+        const res = await axios.get(`${API_BASE}/friends/request`, {
+          headers: getAuthHeaders(),
+        });
+
+        const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        setFriendRequests(items);
+      } catch (err) {
+        console.error('獲取好友邀請失敗:', err);
+      }
+    };
+
+    fetchFriendRequests();
+  }, [isLoggedIn]);
+
+  const handleAccept = async (requestId) => {
+    if (!requestId) return;
+
+    try {
+      await axios.post(
+        `${API_BASE}/friends/accept`,
+        { requestId },
+        { headers: { 'Content-Type': 'application/json', ...getAuthHeaders() } }
+      );
+
+      // 重新獲取邀請列表
+      const res = await axios.get(`${API_BASE}/friends/request`, {
+        headers: getAuthHeaders(),
+      });
+      const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      setFriendRequests(items);
+    } catch (err) {
+      console.error('接受好友邀請失敗:', err);
+    }
+  };
+
+  const handleReject = async (requestId) => {
+    console.warn('目前後端尚未提供 reject endpoint，requestId:', requestId);
+    alert('目前尚未支援「拒絕」功能（後端未提供 reject API）。');
+  };
+
+  const handleLogout = () => {
+    authLogout();
+    setIsLoggedIn(false);
+    navigate('/login');
+  };
 
   const handleAddFriend = async () => {
     const trimmedEmail = email.trim();
@@ -55,10 +116,19 @@ export default function AddFriend() {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 4 }}>
-      <Typography variant="h5" fontWeight="bold" mb={2}>
-        新增好友
-      </Typography>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB' }}>
+      <NavigationBar
+        isLoggedIn={isLoggedIn}
+        onLogout={handleLogout}
+        friendRequests={friendRequests}
+        onAcceptFriend={handleAccept}
+        onRejectFriend={handleReject}
+      />
+
+      <Container maxWidth="sm" sx={{ mt: 4 }}>
+        <Typography variant="h5" fontWeight="bold" mb={2}>
+          新增好友
+        </Typography>
 
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
         <TextField
@@ -83,6 +153,7 @@ export default function AddFriend() {
           {status.message}
         </Alert>
       </Snackbar>
-    </Container>
+      </Container>
+    </Box>
   );
 }

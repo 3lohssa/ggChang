@@ -1,11 +1,8 @@
 // src/pages/Dashboard.jsx
-import { Container, Card, Typography, Button, Box, Grid, IconButton, AppBar, Toolbar, ImageList, ImageListItem, Dialog, DialogContent, DialogActions, DialogTitle, Snackbar, Alert } from '@mui/material'
+import { Container, Card, Typography, Button, Box, Grid, IconButton, ImageList, ImageListItem, Dialog, DialogContent, DialogActions, DialogTitle, Snackbar, Alert } from '@mui/material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import AddIcon from '@mui/icons-material/Add';
-import LogoutIcon from '@mui/icons-material/Logout';
-import LoginIcon from '@mui/icons-material/Login';
-import MenuIcon from '@mui/icons-material/Menu';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios'
 import { exchangeCodeForTokens, isAuthenticated, logout as authLogout, getAuthHeaders, getUserId } from '../utils/auth'
@@ -16,15 +13,12 @@ import { format, parse, startOfWeek, getDay } from "date-fns";
 import enUS from "date-fns/locale/en-US";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { startOfMonth, endOfMonth } from "date-fns";
-import { Drawer, List, ListItemButton, ListItemText } from "@mui/material";
-import ExpandLess from '@mui/icons-material/ExpandLess';
-import ExpandMore from '@mui/icons-material/ExpandMore';
-import Collapse from '@mui/material/Collapse';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import { styled } from '@mui/material/styles';
+import NavigationBar from '../components/NavigationBar';
 
 
 const StyledCalendarWrapper = styled(Box)(({ theme }) => ({
@@ -206,9 +200,6 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
   const [records, setRecords] = useState([]) // 儲存支出紀錄
   const [totalAmount, setTotalAmount] = useState(0) // 儲存總金額
   const [selectedRecord, setSelectedRecord] = useState(null) // 選中的紀錄 (用於顯示詳情)
-  const now = new Date();
-  const monthStart = startOfMonth(now);
-  const monthEnd = endOfMonth(now);
   const [friendRequests, setFriendRequests] = useState([]);
   const [requestActionStatus, setRequestActionStatus] = useState({
     loadingId: null,
@@ -216,8 +207,11 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
     message: '',
     severity: 'success'
   });
-  const [openFriendRequests, setOpenFriendRequests] = useState(false);  
-  const [openMenu, setOpenMenu] = useState(false);
+
+  const now = new Date();
+  const monthStart = startOfMonth(now);
+  const monthEnd = endOfMonth(now);
+  
   const handleSelectSlot = (slotInfo) => {
   const date = format(slotInfo.start, "yyyy-MM-dd");
   navigate(`/add-record?date=${date}`);
@@ -263,12 +257,25 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
       return;
     }
     try {
-      const response = await axios.get(
-        `https://ttxklr1893.execute-api.ap-southeast-1.amazonaws.com/prod/expenses?userId=${encodeURIComponent(targetUser)}`,
-        {
-          headers: getAuthHeaders()
-        }
-      );
+      let response;
+
+      // 如果是查看朋友的帳本，使用朋友記錄 API
+      if (isFriend) {
+        response = await axios.get(
+          `${API_BASE}/friends/records?friendSub=${encodeURIComponent(targetUser)}`,
+          {
+            headers: getAuthHeaders()
+          }
+        );
+      } else {
+        // 查看自己的帳本，使用一般的 expenses API
+        response = await axios.get(
+          `${API_BASE}/expenses?userId=${encodeURIComponent(targetUser)}`,
+          {
+            headers: getAuthHeaders()
+          }
+        );
+      }
 
       // 根據 createdAt 由新到舊排序 (Newest First)
       const sortedRecords = (response.data.items || []).sort((a, b) => {
@@ -289,94 +296,93 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
     }
   };
 
-  
-// 取得交友邀請列表：GET /friends/request
-const fetchFriendRequests = async () => {
-  try {
-    const res = await axios.get(`${API_BASE}/friends/request`, {
-      headers: getAuthHeaders(),
-    });
+  // 取得交友邀請列表：GET /friends/request
+  const fetchFriendRequests = async () => {
+    console.log('[fetchFriendRequests] 開始獲取邀請');
+    try {
+      const res = await axios.get(`${API_BASE}/friends/request`, {
+        headers: getAuthHeaders(),
+      });
 
-    const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
-    setFriendRequests(items);
-  } catch (err) {
-    console.error('取得交友邀請失敗:', {
-      status: err.response?.status,
-      data: err.response?.data,
-      message: err.message,
-    });
+      console.log('[fetchFriendRequests] API 回應:', res.data);
 
-    if (err.response?.status === 401) {
-      authLogout();
-      setIsLoggedIn(false);
-      navigate('/login');
+      // 後端可能回 { items: [...] } 或直接回 [...]
+      const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      console.log('[fetchFriendRequests] 處理後的邀請:', items);
+      setFriendRequests(items);
+    } catch (err) {
+      console.error('[fetchFriendRequests] 取得交友邀請失敗:', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      });
+
+      if (err.response?.status === 401) {
+        authLogout();
+        setIsLoggedIn(false);
+        navigate('/login');
+      }
     }
-  }
-};
+  };
 
-// 接受邀請：POST /friends/accept，後端需要 { fromSub }
-const handleAccept = async (fromSub) => {
-  if (!fromSub) {
+  // 接受邀請：POST /friends/accept  body: { fromSub }
+  const handleAccept = async (fromSub) => {
+    if (!fromSub) {
+        setRequestActionStatus({
+            loadingId: null,
+            open: true,
+            message: '無法接受：缺少 fromSub',
+            severity: 'error',
+        });
+        return;
+    }
+
+    setRequestActionStatus((prev) => ({ ...prev, loadingId: fromSub }));
+
+    try {
+      await axios.post(
+        `${API_BASE}/friends/accept`,
+        { fromSub },
+        { headers: { 'Content-Type': 'application/json', ...getAuthHeaders() } }
+      );
+
+      // 重新刷新邀請列表
+      fetchFriendRequests();
+      
+      setRequestActionStatus({
+          loadingId: null,
+          open: true,
+          message: '已接受好友邀請',
+          severity: 'success',
+      });
+    } catch (err) {
+      console.error('接受交友邀請失敗:', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      });
+      setRequestActionStatus({
+          loadingId: null,
+          open: true,
+          message: err.response?.data?.message || '接受交友邀請失敗',
+          severity: 'error',
+      });
+    } finally {
+        setRequestActionStatus((prev) => ({ ...prev, loadingId: null }));
+    }
+  };
+
+  // 你的 API 樹沒有 reject，所以先不要打 API，避免永遠失敗
+  const handleReject = async (requestId) => {
+    console.warn('目前後端尚未提供 reject endpoint，requestId:', requestId);
+    // alert('目前尚未支援「拒絕」功能（後端未提供 reject API）。');
     setRequestActionStatus({
-      loadingId: null,
-      open: true,
-      message: 'Missing fromSub',
-      severity: 'error',
+        loadingId: null,
+        open: true,
+        message: '目前尚未支援「拒絕」功能（後端未提供 reject API）。',
+        severity: 'info',
     });
-    return;
-  }
-
-  setRequestActionStatus((prev) => ({ ...prev, loadingId: fromSub }));
-
-  try {
-    await axios.post(
-      `${API_BASE}/friends/accept`,
-      { fromSub },
-      { headers: { 'Content-Type': 'application/json', ...getAuthHeaders() } }
-    );
-
-    await fetchFriendRequests();
-
-    setRequestActionStatus({
-      loadingId: null,
-      open: true,
-      message: 'Friend request accepted.',
-      severity: 'success',
-    });
-  } catch (err) {
-    console.error('接受交友邀請失敗:', {
-      status: err.response?.status,
-      data: err.response?.data,
-      message: err.message,
-    });
-
-    const message =
-      err.response?.data?.message ||
-      err.response?.data?.error ||
-      'Failed to accept friend request.';
-
-    setRequestActionStatus({
-      loadingId: null,
-      open: true,
-      message,
-      severity: 'error',
-    });
-  } finally {
-    setRequestActionStatus((prev) => ({ ...prev, loadingId: null }));
-  }
-};
-
-// 目前後端尚未提供 reject endpoint：先做提示
-const handleReject = async (requestId) => {
-  console.warn('目前後端尚未提供 reject endpoint，requestId:', requestId);
-  setRequestActionStatus({
-    loadingId: null,
-    open: true,
-    message: 'Reject not supported yet (no backend API).',
-    severity: 'error',
-  });
-};
-
+  };
 
 
 
@@ -445,84 +451,14 @@ const handleReject = async (requestId) => {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB', py: 4 }}>
-      {/* 簡單的頂部導覽列 */}
-      <AppBar position="static" color="transparent" elevation={0} sx={{ bgcolor: 'white' }}>
-        <Toolbar>
-          <IconButton onClick={() => setOpenMenu(true)} edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
-            <MenuIcon />
-          </IconButton>
-                              <Drawer open={openMenu} onClose={() => setOpenMenu(false)}>
-            <List sx={{ width: 250 }}>
-              <ListItemButton onClick={() => navigate('/dashboard')}>
-                <ListItemText primary="記帳本" />
-              </ListItemButton>
-
-              <ListItemButton onClick={() => navigate('/friends')}>
-                <ListItemText primary="朋友" />
-              </ListItemButton>
-              <ListItemButton onClick={() => navigate('/add-friend')}>
-                <ListItemText primary="加好友" />
-              </ListItemButton>
-              <ListItemButton onClick={() => setOpenFriendRequests(!openFriendRequests)}>
-                <ListItemText primary="交友邀請" />
-                {openFriendRequests ? <ExpandLess /> : <ExpandMore />}
-              </ListItemButton>
-
-              <Collapse in={openFriendRequests} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                  {friendRequests.map((req) => {
-                    const requestId = req.requestId || req.id || req.friendSubOrRequestId;
-                    const fromSub = req.fromSub;
-                    const displayName =
-                          req.fromUserName ||
-                          req.senderEmail ||
-                          req.fromEmail ||
-                          req.fromSub ||
-                          requestId ||
-                          '未知用戶';
-
-                    return (
-                      <ListItemButton key={requestId || displayName} sx={{ pl: 4, gap: 1 }}>
-                        <ListItemText primary={displayName} />
-                        <Button
-                          size="small"
-                          variant="contained"
-                          onClick={() => handleAccept(fromSub)}
-
-                        >
-                          接受
-                        </Button>
-
-                          <Button size="small" variant="outlined" color="error" onClick={() => handleReject(requestId)}>
-                            拒絕
-                          </Button>
-
-                      </ListItemButton>
-                    );
-                  })}
-                  {friendRequests.length === 0 && (
-                    <ListItemButton sx={{ pl: 4 }}>
-                      <ListItemText primary="沒有邀請" />
-                    </ListItemButton>
-                  )}
-                </List>
-              </Collapse>
-            </List>
-          </Drawer>
-          <Typography variant="h4" component="div" sx={{ flexGrow: 1, color: '#271010ff' }}>
-            記記好帳
-          </Typography>
-          {!isLoggedIn ? (
-            <IconButton color="inherit" onClick={() => navigate('/login')}>
-              <LoginIcon />
-            </IconButton>
-          ) : (
-            <IconButton color="inherit" onClick={handleLogout}>
-              <LogoutIcon />
-            </IconButton>
-          )}
-        </Toolbar>
-      </AppBar>
+      {/* 導航列 */}
+      <NavigationBar
+        isLoggedIn={isLoggedIn}
+        onLogout={handleLogout}
+        friendRequests={friendRequests}
+        onAcceptFriend={handleAccept}
+        onRejectFriend={handleReject}
+      />
       {/* Calender 卡片區域 */}
       <Card 
         sx={{ 
