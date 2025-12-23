@@ -249,12 +249,25 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
       return;
     }
     try {
-      const response = await axios.get(
-        `https://ttxklr1893.execute-api.ap-southeast-1.amazonaws.com/prod/expenses?userId=${encodeURIComponent(targetUser)}`,
-        {
-          headers: getAuthHeaders()
-        }
-      );
+      let response;
+
+      // 如果是查看朋友的帳本，使用朋友記錄 API
+      if (isFriend) {
+        response = await axios.get(
+          `${API_BASE}/friends/records?friendSub=${encodeURIComponent(targetUser)}`,
+          {
+            headers: getAuthHeaders()
+          }
+        );
+      } else {
+        // 查看自己的帳本，使用一般的 expenses API
+        response = await axios.get(
+          `${API_BASE}/expenses?userId=${encodeURIComponent(targetUser)}`,
+          {
+            headers: getAuthHeaders()
+          }
+        );
+      }
 
       // 根據 createdAt 由新到舊排序 (Newest First)
       const sortedRecords = (response.data.items || []).sort((a, b) => {
@@ -277,16 +290,20 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
 
   // 取得交友邀請列表：GET /friends/request
   const fetchFriendRequests = async () => {
+    console.log('[fetchFriendRequests] 開始獲取邀請');
     try {
       const res = await axios.get(`${API_BASE}/friends/request`, {
         headers: getAuthHeaders(),
       });
 
+      console.log('[fetchFriendRequests] API 回應:', res.data);
+
       // 後端可能回 { items: [...] } 或直接回 [...]
       const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      console.log('[fetchFriendRequests] 處理後的邀請:', items);
       setFriendRequests(items);
     } catch (err) {
-      console.error('取得交友邀請失敗:', {
+      console.error('[fetchFriendRequests] 取得交友邀請失敗:', {
         status: err.response?.status,
         data: err.response?.data,
         message: err.message,

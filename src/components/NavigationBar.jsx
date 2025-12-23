@@ -10,6 +10,7 @@ import {
   ListItemText,
   Button,
   Collapse,
+  Box,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -65,7 +66,7 @@ export default function NavigationBar({
               <List component="div" disablePadding>
                 {friendRequests.map((req) => {
                   const requestId = req.requestId || req.id || req.friendSubOrRequestId;
-                  const displayName =
+                  const rawName =
                     req.fromUserName ||
                     req.senderEmail ||
                     req.fromEmail ||
@@ -73,25 +74,36 @@ export default function NavigationBar({
                     requestId ||
                     '未知用戶';
 
+                  // 如果是電子郵件格式，只顯示 '@' 之前的部分
+                  const displayName = rawName.includes('@')
+                    ? rawName.split('@')[0]
+                    : rawName;
+
                   return (
-                    <ListItemButton key={requestId || displayName} sx={{ pl: 4, gap: 1 }}>
-                      <ListItemText primary={displayName} />
-                      <Button
-                        size="small"
-                        variant="contained"
-                        onClick={() => onAcceptFriend(requestId)}
-                      >
-                        接受
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="error"
-                        onClick={() => onRejectFriend(requestId)}
-                      >
-                        拒絕
-                      </Button>
-                    </ListItemButton>
+                    <Box key={requestId || displayName} sx={{ pl: 4, py: 1.5, borderBottom: '1px solid #f0f0f0' }}>
+                      <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                        {displayName}
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          onClick={() => onAcceptFriend(requestId)}
+                          sx={{ flex: 1 }}
+                        >
+                          接受
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="error"
+                          onClick={() => onRejectFriend(requestId)}
+                          sx={{ flex: 1 }}
+                        >
+                          拒絕
+                        </Button>
+                      </Box>
+                    </Box>
                   );
                 })}
                 {friendRequests.length === 0 && (

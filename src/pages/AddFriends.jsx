@@ -19,6 +19,7 @@ export default function AddFriend() {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState('');
+  const [friendRequests, setFriendRequests] = useState([]);
   const [status, setStatus] = useState({
     message: '',
     type: 'success',
@@ -28,6 +29,52 @@ export default function AddFriend() {
   useEffect(() => {
     setIsLoggedIn(isAuthenticated());
   }, []);
+
+  // 獲取好友邀請
+  useEffect(() => {
+    const fetchFriendRequests = async () => {
+      if (!isLoggedIn) return;
+
+      try {
+        const res = await axios.get(`${API_BASE}/friends/request`, {
+          headers: getAuthHeaders(),
+        });
+
+        const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        setFriendRequests(items);
+      } catch (err) {
+        console.error('獲取好友邀請失敗:', err);
+      }
+    };
+
+    fetchFriendRequests();
+  }, [isLoggedIn]);
+
+  const handleAccept = async (requestId) => {
+    if (!requestId) return;
+
+    try {
+      await axios.post(
+        `${API_BASE}/friends/accept`,
+        { requestId },
+        { headers: { 'Content-Type': 'application/json', ...getAuthHeaders() } }
+      );
+
+      // 重新獲取邀請列表
+      const res = await axios.get(`${API_BASE}/friends/request`, {
+        headers: getAuthHeaders(),
+      });
+      const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      setFriendRequests(items);
+    } catch (err) {
+      console.error('接受好友邀請失敗:', err);
+    }
+  };
+
+  const handleReject = async (requestId) => {
+    console.warn('目前後端尚未提供 reject endpoint，requestId:', requestId);
+    alert('目前尚未支援「拒絕」功能（後端未提供 reject API）。');
+  };
 
   const handleLogout = () => {
     authLogout();
@@ -70,7 +117,13 @@ export default function AddFriend() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB' }}>
-      <NavigationBar isLoggedIn={isLoggedIn} onLogout={handleLogout} />
+      <NavigationBar
+        isLoggedIn={isLoggedIn}
+        onLogout={handleLogout}
+        friendRequests={friendRequests}
+        onAcceptFriend={handleAccept}
+        onRejectFriend={handleReject}
+      />
 
       <Container maxWidth="sm" sx={{ mt: 4 }}>
         <Typography variant="h5" fontWeight="bold" mb={2}>
