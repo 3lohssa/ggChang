@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -8,18 +8,32 @@ import {
   Snackbar,
   Alert,
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { getAuthHeaders } from '../utils/auth';
+import { getAuthHeaders, isAuthenticated, logout as authLogout } from '../utils/auth';
+import NavigationBar from '../components/NavigationBar';
 
 const API_BASE = 'https://ttxklr1893.execute-api.ap-southeast-1.amazonaws.com/prod';
 
 export default function AddFriend() {
+  const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState({
     message: '',
     type: 'success',
     open: false,
   });
+
+  useEffect(() => {
+    setIsLoggedIn(isAuthenticated());
+  }, []);
+
+  const handleLogout = () => {
+    authLogout();
+    setIsLoggedIn(false);
+    navigate('/login');
+  };
 
   const handleAddFriend = async () => {
     const trimmedEmail = email.trim();
@@ -55,10 +69,13 @@ export default function AddFriend() {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 4 }}>
-      <Typography variant="h5" fontWeight="bold" mb={2}>
-        新增好友
-      </Typography>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB' }}>
+      <NavigationBar isLoggedIn={isLoggedIn} onLogout={handleLogout} />
+
+      <Container maxWidth="sm" sx={{ mt: 4 }}>
+        <Typography variant="h5" fontWeight="bold" mb={2}>
+          新增好友
+        </Typography>
 
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
         <TextField
@@ -83,6 +100,7 @@ export default function AddFriend() {
           {status.message}
         </Alert>
       </Snackbar>
-    </Container>
+      </Container>
+    </Box>
   );
 }

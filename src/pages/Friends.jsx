@@ -1,5 +1,8 @@
 import { List, ListItemButton, ListItemText, Container, Typography, Paper, Box, Avatar } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { isAuthenticated, logout as authLogout } from "../utils/auth";
+import NavigationBar from "../components/NavigationBar";
 
 const friends = [
   { userId: "user_aaa", name: "Alex" },
@@ -9,12 +12,26 @@ const friends = [
 
 export default function Friends() {
   const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    setIsLoggedIn(isAuthenticated());
+  }, []);
+
+  const handleLogout = () => {
+    authLogout();
+    setIsLoggedIn(false);
+    navigate('/login');
+  };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 4, mb: 4, fontFamily: '"Noto Sans TC", "Roboto", sans-serif' }}>
-      <Typography variant="h5" fontWeight="bold" sx={{ mb: 3, textAlign: 'center' }}>
-        我的朋友
-      </Typography>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB' }}>
+      <NavigationBar isLoggedIn={isLoggedIn} onLogout={handleLogout} />
+
+      <Container maxWidth="sm" sx={{ mt: 4, mb: 4, fontFamily: '"Noto Sans TC", "Roboto", sans-serif' }}>
+        <Typography variant="h5" fontWeight="bold" sx={{ mb: 3, textAlign: 'center' }}>
+          我的朋友
+        </Typography>
 
       <Paper elevation={3} sx={{ p: 2, borderRadius: 3, bgcolor: '#f9f9f9' }}>
         <List>
@@ -47,5 +64,6 @@ export default function Friends() {
         </List>
       </Paper>
     </Container>
+    </Box>
   );
 }

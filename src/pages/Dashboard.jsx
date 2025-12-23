@@ -1,11 +1,8 @@
 // src/pages/Dashboard.jsx
-import { Container, Card, Typography, Button, Box, Grid, IconButton, AppBar, Toolbar, ImageList, ImageListItem, Dialog, DialogContent, DialogActions, DialogTitle } from '@mui/material'
+import { Container, Card, Typography, Button, Box, Grid, IconButton, ImageList, ImageListItem, Dialog, DialogContent, DialogActions, DialogTitle } from '@mui/material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import AddIcon from '@mui/icons-material/Add';
-import LogoutIcon from '@mui/icons-material/Logout';
-import LoginIcon from '@mui/icons-material/Login';
-import MenuIcon from '@mui/icons-material/Menu';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios'
 import { exchangeCodeForTokens, isAuthenticated, logout as authLogout, getAuthHeaders, getUserId } from '../utils/auth'
@@ -14,15 +11,12 @@ import { format, parse, startOfWeek, getDay } from "date-fns";
 import enUS from "date-fns/locale/en-US";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { startOfMonth, endOfMonth } from "date-fns";
-import { Drawer, List, ListItemButton, ListItemText } from "@mui/material";
-import ExpandLess from '@mui/icons-material/ExpandLess';
-import ExpandMore from '@mui/icons-material/ExpandMore';
-import Collapse from '@mui/material/Collapse';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import { styled } from '@mui/material/styles';
+import NavigationBar from '../components/NavigationBar';
 
 
 const StyledCalendarWrapper = styled(Box)(({ theme }) => ({
@@ -207,9 +201,6 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
   const now = new Date();
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
-  const [friendRequests, setFriendRequests] = useState([]);
-  const [openFriendRequests, setOpenFriendRequests] = useState(false);  
-  const [openMenu, setOpenMenu] = useState(false);
   const handleSelectSlot = (slotInfo) => {
   const date = format(slotInfo.start, "yyyy-MM-dd");
   navigate(`/add-record?date=${date}`);
@@ -281,43 +272,6 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
     }
   };
 
-  
-  const fetchFriendRequests = async () => {
-    try {
-      const res = await axios.get('https://your-api-endpoint/friend-requests', {
-        headers: getAuthHeaders()
-      });
-      setFriendRequests(res.data.items);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleAccept = async (requestId) => {
-    try {
-      await axios.post(`https://your-api-endpoint/friend-requests/${requestId}/accept`, {}, {
-        headers: getAuthHeaders()
-      });
-      fetchFriendRequests(); // 更新列表
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleReject = async (requestId) => {
-    try {
-      await axios.post(`https://your-api-endpoint/friend-requests/${requestId}/reject`, {}, {
-        headers: getAuthHeaders()
-      });
-      fetchFriendRequests(); // 更新列表
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  useEffect(() => {
-    fetchFriendRequests();
-  }, []);
 
 
   useEffect(() => {
@@ -378,61 +332,8 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#F9FAFB', py: 4 }}>
-      {/* 簡單的頂部導覽列 */}
-      <AppBar position="static" color="transparent" elevation={0} sx={{ bgcolor: 'white' }}>
-        <Toolbar>
-          <IconButton onClick={() => setOpenMenu(true)} edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
-            <MenuIcon />
-          </IconButton>
-          <Drawer open={openMenu} onClose={() => setOpenMenu(false)}>
-            <List sx={{ width: 250 }}>
-              <ListItemButton onClick={() => navigate("/dashboard")}>
-                <ListItemText primary="我的帳本" />
-              </ListItemButton>
-
-              <ListItemButton onClick={() => navigate("/friends")}>
-                <ListItemText primary="朋友" />
-              </ListItemButton>
-              <ListItemButton onClick={() => navigate("/add-friend")}>
-                <ListItemText primary="新增好友" />
-              </ListItemButton>
-              <ListItemButton onClick={() => setOpenFriendRequests(!openFriendRequests)}>
-                <ListItemText primary="交友邀請" />
-                {openFriendRequests ? <ExpandLess /> : <ExpandMore />}
-              </ListItemButton>
-
-              <Collapse in={openFriendRequests} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                  {friendRequests.map((req) => (
-                    <ListItemButton key={req.id} sx={{ pl: 4 }}>
-                      <ListItemText primary={req.fromUserName} />
-                      <Button size="small" variant="contained" onClick={() => handleAccept(req.id)}>接受</Button>
-                      <Button size="small" variant="outlined" color="error" onClick={() => handleReject(req.id)}>拒絕</Button>
-                    </ListItemButton>
-                  ))}
-                  {friendRequests.length === 0 && (
-                    <ListItemButton sx={{ pl: 4 }}>
-                      <ListItemText primary="沒有新的邀請" />
-                    </ListItemButton>
-                  )}
-                </List>
-              </Collapse>
-            </List>
-          </Drawer>
-          <Typography variant="h4" component="div" sx={{ flexGrow: 1, color: '#271010ff' }}>
-            記記好帳
-          </Typography>
-          {!isLoggedIn ? (
-            <IconButton color="inherit" onClick={() => navigate('/login')}>
-              <LoginIcon />
-            </IconButton>
-          ) : (
-            <IconButton color="inherit" onClick={handleLogout}>
-              <LogoutIcon />
-            </IconButton>
-          )}
-        </Toolbar>
-      </AppBar>
+      {/* 導航列 */}
+      <NavigationBar isLoggedIn={isLoggedIn} onLogout={handleLogout} />
       {/* Calender 卡片區域 */}
       <Card 
         sx={{ 
