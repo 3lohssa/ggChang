@@ -9,6 +9,8 @@ import MenuIcon from '@mui/icons-material/Menu';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios'
 import { exchangeCodeForTokens, isAuthenticated, logout as authLogout, getAuthHeaders, getUserId } from '../utils/auth'
+
+const API_BASE = 'https://ttxklr1893.execute-api.ap-southeast-1.amazonaws.com/prod';
 import { Calendar, dateFnsLocalizer } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import enUS from "date-fns/locale/en-US";
@@ -293,42 +295,68 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
   };
 
   
-  const fetchFriendRequests = async () => {
-    try {
-      const res = await axios.get('https://your-api-endpoint/friend-requests', {
-        headers: getAuthHeaders()
-      });
-      setFriendRequests(res.data.items);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  // 取得交友邀請列表：GET /friends/request
+const fetchFriendRequests = async () => {
+  try {
+    const res = await axios.get(`${API_BASE}/friends/request`, {
+      headers: getAuthHeaders(),
+    });
 
-  const handleAccept = async (requestId) => {
-    try {
-      await axios.post(`https://your-api-endpoint/friend-requests/${requestId}/accept`, {}, {
-        headers: getAuthHeaders()
-      });
-      fetchFriendRequests(); // 更新列表
-    } catch (err) {
-      console.error(err);
-    }
-  };
+    // 後端可能回 { items: [...] } 或直接回 [...]
+    const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+    setFriendRequests(items);
+  } catch (err) {
+    console.error('取得交友邀請失敗:', {
+      status: err.response?.status,
+      data: err.response?.data,
+      message: err.message,
+    });
 
-  const handleReject = async (requestId) => {
-    try {
-      await axios.post(`https://your-api-endpoint/friend-requests/${requestId}/reject`, {}, {
-        headers: getAuthHeaders()
-      });
-      fetchFriendRequests(); // 更新列表
-    } catch (err) {
-      console.error(err);
+    if (err.response?.status === 401) {
+      authLogout();
+      setIsLoggedIn(false);
+      navigate('/login');
     }
-  };
+  }
+};
+
+// 接受邀請：POST /friends/accept  body: { requestId }
+const handleAccept = async (requestId) => {
+  if (!requestId) {
+    console.warn('無法接受：缺少 requestId');
+    return;
+  }
+
+  try {
+    await axios.post(
+      `${API_BASE}/friends/accept`,
+      { requestId },
+      { headers: { 'Content-Type': 'application/json', ...getAuthHeaders() } }
+    );
+
+    // 重新刷新邀請列表
+    fetchFriendRequests();
+  } catch (err) {
+    console.error('接受交友邀請失敗:', {
+      status: err.response?.status,
+      data: err.response?.data,
+      message: err.message,
+    });
+  }
+};
+
+// 你的 API 樹沒有 reject，所以先不要打 API，避免永遠失敗
+const handleReject = async (requestId) => {
+  console.warn('目前後端尚未提供 reject endpoint，requestId:', requestId);
+  alert('目前尚未支援「拒絕」功能（後端未提供 reject API）。');
+};
+
 
   useEffect(() => {
-    fetchFriendRequests();
-  }, []);
+    if (isLoggedIn) {
+      fetchFriendRequests();
+    }
+  }, [isLoggedIn]);
 
 
   useEffect(() => {
@@ -395,17 +423,17 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
           <IconButton onClick={() => setOpenMenu(true)} edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
             <MenuIcon />
           </IconButton>
-          <Drawer open={openMenu} onClose={() => setOpenMenu(false)}>
+                              <Drawer open={openMenu} onClose={() => setOpenMenu(false)}>
             <List sx={{ width: 250 }}>
-              <ListItemButton onClick={() => navigate("/dashboard")}>
-                <ListItemText primary="我的帳本" />
+              <ListItemButton onClick={() => navigate('/dashboard')}>
+                <ListItemText primary="記帳本" />
               </ListItemButton>
 
-              <ListItemButton onClick={() => navigate("/friends")}>
+              <ListItemButton onClick={() => navigate('/friends')}>
                 <ListItemText primary="朋友" />
               </ListItemButton>
-              <ListItemButton onClick={() => navigate("/add-friend")}>
-                <ListItemText primary="新增好友" />
+              <ListItemButton onClick={() => navigate('/add-friend')}>
+                <ListItemText primary="加好友" />
               </ListItemButton>
               <ListItemButton onClick={() => setOpenFriendRequests(!openFriendRequests)}>
                 <ListItemText primary="交友邀請" />
@@ -414,16 +442,32 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
 
               <Collapse in={openFriendRequests} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding>
-                  {friendRequests.map((req) => (
-                    <ListItemButton key={req.id} sx={{ pl: 4 }}>
-                      <ListItemText primary={req.fromUserName} />
-                      <Button size="small" variant="contained" onClick={() => handleAccept(req.id)}>接受</Button>
-                      <Button size="small" variant="outlined" color="error" onClick={() => handleReject(req.id)}>拒絕</Button>
-                    </ListItemButton>
-                  ))}
+                  {friendRequests.map((req) => {
+                    const requestId = req.requestId || req.id || req.friendSubOrRequestId;
+                    const displayName =
+                          req.fromUserName ||
+                          req.senderEmail ||
+                          req.fromEmail ||
+                          req.fromSub ||
+                          requestId ||
+                          '未知用戶';
+
+                    return (
+                      <ListItemButton key={requestId || displayName} sx={{ pl: 4, gap: 1 }}>
+                        <ListItemText primary={displayName} />
+                        <Button size="small" variant="contained" onClick={() => handleAccept(requestId)}>
+                            接受
+                          </Button>
+                          <Button size="small" variant="outlined" color="error" onClick={() => handleReject(requestId)}>
+                            拒絕
+                          </Button>
+
+                      </ListItemButton>
+                    );
+                  })}
                   {friendRequests.length === 0 && (
                     <ListItemButton sx={{ pl: 4 }}>
-                      <ListItemText primary="沒有新的邀請" />
+                      <ListItemText primary="沒有邀請" />
                     </ListItemButton>
                   )}
                 </List>
