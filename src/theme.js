@@ -28,10 +28,15 @@ const theme = createTheme({
     borderRadius: 16,
   },
   typography: {
-    fontFamily: '"Plus Jakarta Sans", "Inter", "Roboto", sans-serif', // 建議引入 Google Font: Plus Jakarta Sans
-    h4: { fontWeight: 700, letterSpacing: '-0.02em' },
-    h5: { fontWeight: 600, letterSpacing: '-0.01em' },
-    h6: { fontWeight: 600 },
+    fontFamily: `'Roboto', 'Noto Sans TC', 'Arial', sans-serif`, // 建議引入 Google Font: Plus Jakarta Sans
+    h1: { fontFamily: `'VT323', monospace` },
+    h2: { fontFamily: `'VT323', monospace` },
+    h3: { fontFamily: `'VT323', monospace` },
+    h4: { fontFamily: `'VT323', monospace` },
+    h5: { fontFamily: `'Roboto', sans-serif` },
+    h6: { fontFamily: `'Roboto', sans-serif` },
+    body1: { fontFamily: `'Poppins', sans-serif` },
+    body2: { fontFamily: `'Poppins', sans-serif` },
     button: { textTransform: 'none', fontWeight: 600, borderRadius: 12 },
   },
   components: {

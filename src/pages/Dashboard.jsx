@@ -55,12 +55,12 @@ const StyledCalendarWrapper = styled(Box)(({ theme }) => ({
     padding: '12px 0',
     fontWeight: 600,
     color: theme.palette.text.secondary,
-    fontSize: '1.2rem',
+    fontSize: '1.5rem',
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
   },
   '& .rbc-toolbar-label': {
-    fontSize: '2rem',
+    fontSize: '2.5rem',
     fontWeight: 700,
     color: '#333',
     letterSpacing: '1px',
@@ -150,7 +150,7 @@ const CustomToolbar = (toolbar) => {
             onClick={goToCurrent}
             sx={{ borderRadius: 2, textTransform: 'none', color: 'text.secondary', borderColor: 'divider' }}
         >
-            今天
+            Today
         </Button>
         <IconButton onClick={goToBack} size="small" sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
           <ArrowBackIosNewIcon fontSize="small" />
@@ -217,8 +217,6 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
   const handleSelectSlot = (slotInfo) => {
   const date = format(slotInfo.start, "yyyy-MM-dd");
   navigate(`/add-record?date=${date}`);
-  // 在 Dashboard function 裡面
-  
 };
 
   const monthlyRecords = records.filter((r) => {
@@ -428,8 +426,8 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
               </Collapse>
             </List>
           </Drawer>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold', color: '#000000' }}>
-            ExpenseTracker
+          <Typography variant="h4" component="div" sx={{ flexGrow: 1, color: '#271010ff' }}>
+            記記好帳
           </Typography>
           {!isLoggedIn ? (
             <IconButton color="inherit" onClick={() => navigate('/login')}>
@@ -493,11 +491,11 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
 
           <Box sx={{ p: 4 }}>
           {/* 標題文字變淡灰 */}
-          <Typography variant="subtitle1" sx={{ color: '#6B7280', mb: 1, fontWeight: 500 }}>
+          <Typography variant="subtitle1" sx={{ color: '#6B7280', mb: 1 }}>
               本月結餘
           </Typography>
           {/* 金額變深黑 */}
-          <Typography variant="h3" fontWeight="bold" sx={{ mb: 4, color: '#111827' }}>
+          <Typography variant="h1" fontWeight="bold" sx={{ mb: 4, color: '#111827' }}>
               ${monthlyIncome - monthlyExpense}
           </Typography>
 
@@ -523,8 +521,8 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
                   <TrendingDownIcon color="error" />
                 </Box> */}
                 <Box>
-                  <Typography variant="caption" sx={{ color: '#EF4444', fontWeight: 600 }}>本月支出</Typography>
-                  <Typography variant="h6" fontWeight="bold" sx={{ color: '#111827' }}>
+                  <Typography variant="h3" sx={{ color: '#EF4444', fontWeight: 600 }}>本月支出</Typography>
+                  <Typography variant="h4" sx={{ color: '#111827' }}>
                     ${monthlyExpense}
                   </Typography>
                 </Box>
@@ -551,8 +549,8 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
                     <TrendingUpIcon color="success" />
                   </Box> */}
                   <Box>
-                    <Typography variant="caption" sx={{ color: '#10B981', fontWeight: 600 }}>本月收入</Typography>
-                    <Typography variant="h6" fontWeight="bold" sx={{ color: '#111827' }}>
+                    <Typography variant="h3" sx={{ color: '#10B981', fontWeight: 600 }}>本月收入</Typography>
+                    <Typography variant="h4" sx={{ color: '#111827' }}>
                       ${monthlyIncome}
                     </Typography>
                   </Box>
@@ -575,7 +573,7 @@ export default function Dashboard({ userId = "me", isFriend = false }) {
           bgcolor: '#111827', // 純黑色背景
           color: '#FFFFFF',
           textTransform: 'none', // 取消全大寫，看起來比較優雅
-          fontSize: '1rem',
+          fontSize: '2.5rem',
           fontWeight: 600,
           boxShadow: '0 4px 14px 0 rgba(0, 0, 0, 0.2)', // 黑色陰影
           '&:hover': {
