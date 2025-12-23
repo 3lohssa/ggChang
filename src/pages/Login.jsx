@@ -7,10 +7,6 @@ import LockIcon from '@mui/icons-material/Lock';
 
 // 根據當前網址自動選擇 redirect_uri 目前有登入問題 我先將redirect 寫死
 const getRedirectUri = () => {
-  const currentOrigin = window.location.origin
-  if (currentOrigin.includes('localhost')) {
-    return encodeURIComponent('http://localhost:5173/')
-  }
   return encodeURIComponent('https://d14a9z9u68wcij.cloudfront.net/')
 }
 
@@ -19,7 +15,7 @@ const COGNITO_LOGIN_URL =
   '?client_id=7ru74bpjktaoluf5e5ub9hq1sj' +
   '&response_type=code' +
   '&scope=email+openid+phone'+
-  '&redirect_uri=http://localhost:5173/'
+  '&redirect_uri=https://d14a9z9u68wcij.cloudfront.net/'
 
 export default function Login() {
   const navigate = useNavigate()
